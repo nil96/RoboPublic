@@ -1,31 +1,3 @@
-# vim: set et sw=4 sts=4 fileencoding=utf-8:
-#
-# Python camera library for the Rasperry-Pi camera module
-# Copyright (c) 2013-2017 Dave Jones <dave@waveform.org.uk>
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-#     * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above copyright
-#       notice, this list of conditions and the following disclaimer in the
-#       documentation and/or other materials provided with the distribution.
-#     * Neither the name of the copyright holder nor the
-#       names of its contributors may be used to endorse or promote products
-#       derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import (
     unicode_literals,
@@ -50,15 +22,7 @@ from picamera.frames import PiVideoFrame, PiVideoFrameType
 
 class BufferIO(io.IOBase):
     """
-    A stream which uses a :class:`memoryview` for storage.
 
-    This is used internally by picamera for capturing directly to an existing
-    object which supports the buffer protocol (like a numpy array). Because the
-    underlying storage is fixed in size, the stream also has a fixed size and
-    will raise an :exc:`IOError` exception if an attempt is made to write
-    beyond the end of the buffer (though seek beyond the end is supported).
-
-    Users should never need this class directly.
     """
     __slots__ = ('_buf', '_pos', '_size')
 
@@ -90,27 +54,27 @@ class BufferIO(io.IOBase):
     @property
     def size(self):
         """
-        Return the maximum size of the buffer in bytes.
+
         """
         return self._size
 
     def readable(self):
         """
-        Returns ``True``, indicating that the stream supports :meth:`read`.
+
         """
         self._check_open()
         return True
 
     def writable(self):
         """
-        Returns ``True``, indicating that the stream supports :meth:`write`.
+
         """
         self._check_open()
         return not self._buf.readonly
 
     def seekable(self):
         """
-        Returns ``True``, indicating the stream supports :meth:`seek` and
+
         :meth:`tell`.
         """
         self._check_open()
@@ -118,34 +82,20 @@ class BufferIO(io.IOBase):
 
     def getvalue(self):
         """
-        Return ``bytes`` containing the entire contents of the buffer.
+
         """
         with self.lock:
             return self._buf.tobytes()
 
     def tell(self):
         """
-        Return the current buffer position.
         """
         self._check_open()
         return self._pos
 
     def seek(self, offset, whence=io.SEEK_SET):
         """
-        Change the buffer position to the given byte *offset*. *offset* is
-        interpreted relative to the position indicated by *whence*. Values for
-        *whence* are:
 
-        * ``SEEK_SET`` or ``0`` – start of the buffer (the default); *offset*
-          should be zero or positive
-
-        * ``SEEK_CUR`` or ``1`` – current buffer position; *offset* may be
-          negative
-
-        * ``SEEK_END`` or ``2`` – end of the buffer; *offset* is usually
-          negative
-
-        Return the new absolute position.
         """
         self._check_open()
         if whence == io.SEEK_CUR:
@@ -160,13 +110,7 @@ class BufferIO(io.IOBase):
 
     def read(self, n=-1):
         """
-        Read up to *n* bytes from the buffer and return them. As a convenience,
-        if *n* is unspecified or -1, :meth:`readall` is called. Fewer than *n*
-        bytes may be returned if there are fewer than *n* bytes from the
-        current buffer position to the end of the buffer.
 
-        If 0 bytes are returned, and *n* was not 0, this indicates end of the
-        buffer.
         """
         self._check_open()
         if n < 0:
@@ -180,8 +124,7 @@ class BufferIO(io.IOBase):
 
     def readinto(self, b):
         """
-        Read bytes into a pre-allocated, writable bytes-like object b, and
-        return the number of bytes read.
+
         """
         self._check_open()
         result = max(0, min(len(b), self._size - self._pos))
@@ -193,23 +136,19 @@ class BufferIO(io.IOBase):
 
     def readall(self):
         """
-        Read and return all bytes from the buffer until EOF.
+
         """
         return self.read(max(0, self.size - self._pos))
 
     def truncate(self, size=None):
         """
-        Raises :exc:`NotImplementedError` as the underlying buffer cannot be
-        resized.
+
         """
         raise NotImplementedError('cannot resize a BufferIO stream')
 
     def write(self, b):
         """
-        Write the given bytes or bytearray object, *b*, to the underlying
-        buffer and return the number of bytes written. If the underlying
-        buffer isn't large enough to contain all the bytes of *b*, as many
-        bytes as possible will be written before raising :exc:`IOError`.
+
         """
         self._check_open()
         if self._buf.readonly:
@@ -226,59 +165,7 @@ class BufferIO(io.IOBase):
 
 class CircularIO(io.IOBase):
     """
-    A thread-safe stream which uses a ring buffer for storage.
 
-    CircularIO provides an in-memory stream similar to the :class:`io.BytesIO`
-    class. However, unlike :class:`io.BytesIO` its underlying storage is a
-    `ring buffer`_ with a fixed maximum size. Once the maximum size is reached,
-    writing effectively loops round to the beginning to the ring and starts
-    overwriting the oldest content.
-
-    Actually, this ring buffer is slightly different to "traditional" ring
-    buffers. This ring buffer is optimized for camera usage which is expected
-    to be read-light, write-heavy, and with writes *mostly* aligned to frame
-    boundaries. Internally, the stream simply references each chunk written and
-    drops references each time the overall size of the stream would exceed the
-    specified limit.
-
-    As a result the ring buffer doesn't stay strictly at its allocated limit as
-    traditional ring buffers do. It also drops entire writes when the limit is
-    reached (this is a desirable behaviour because it means that often whole
-    frames are dropped from the start of the stream, rather than leaving
-    partial frames at the start as in a traditional ring buffer). For example:
-
-    .. code-block:: pycon
-
-        >>> stream = CircularIO(size=10)
-        >>> stream.write(b'abc')
-        >>> stream.write(b'def')
-        >>> stream.getvalue()
-        b'abcdef'
-        >>> stream.write(b'ghijk')
-        >>> stream.getvalue()
-        b'defghijk'
-
-    In a traditional ring buffer, one would expect the last ``getvalue()`` call
-    to return ``'bcdefghijk'`` as only the first character would be lost at the
-    limit of 10 bytes. However, this ring buffer has dropped the entire write
-    of ``'abc'``.
-
-    The *size* parameter specifies the maximum size of the stream in bytes. The
-    :meth:`read`, :meth:`tell`, and :meth:`seek` methods all operate
-    equivalently to those in :class:`io.BytesIO` whilst :meth:`write` only
-    differs in the wrapping behaviour described above. A :meth:`read1` method
-    is also provided for efficient reading of the underlying ring buffer in
-    write-sized chunks (or less).
-
-    A re-entrant threading lock guards all operations, and is accessible for
-    external use via the :attr:`lock` attribute.
-
-    The performance of the class is geared toward faster writing than reading
-    on the assumption that writing will be the common operation and reading the
-    rare operation (a reasonable assumption for the camera use-case, but not
-    necessarily for more general usage).
-
-    .. _ring buffer: https://en.wikipedia.org/wiki/Circular_buffer
     """
     def __init__(self, size):
         if size < 1:
@@ -361,20 +248,6 @@ class CircularIO(io.IOBase):
 
     def seek(self, offset, whence=io.SEEK_SET):
         """
-        Change the stream position to the given byte *offset*. *offset* is
-        interpreted relative to the position indicated by *whence*. Values for
-        *whence* are:
-
-        * ``SEEK_SET`` or ``0`` – start of the stream (the default); *offset*
-          should be zero or positive
-
-        * ``SEEK_CUR`` or ``1`` – current stream position; *offset* may be
-          negative
-
-        * ``SEEK_END`` or ``2`` – end of the stream; *offset* is usually
-          negative
-
-        Return the new absolute position.
         """
         self._check_open()
         with self.lock:
@@ -390,13 +263,7 @@ class CircularIO(io.IOBase):
 
     def read(self, n=-1):
         """
-        Read up to *n* bytes from the stream and return them. As a convenience,
-        if *n* is unspecified or -1, :meth:`readall` is called. Fewer than *n*
-        bytes may be returned if there are fewer than *n* bytes from the
-        current stream position to the end of the stream.
 
-        If 0 bytes are returned, and *n* was not 0, this indicates end of the
-        stream.
         """
         self._check_open()
         if n < 0:
@@ -419,21 +286,13 @@ class CircularIO(io.IOBase):
 
     def readall(self):
         """
-        Read and return all bytes from the stream until EOF, using multiple
-        calls to the stream if necessary.
+
         """
         return self.read(max(0, self._length - self._pos))
 
     def read1(self, n=-1):
         """
-        Read up to *n* bytes from the stream using only a single call to the
-        underlying object.
 
-        In the case of :class:`CircularIO` this roughly corresponds to
-        returning the content from the current position up to the end of the
-        write that added that content to the stream (assuming no subsequent
-        writes overwrote the content). :meth:`read1` is particularly useful
-        for efficient copying of the stream's content.
         """
         self._check_open()
         with self.lock:
@@ -452,14 +311,7 @@ class CircularIO(io.IOBase):
 
     def truncate(self, size=None):
         """
-        Resize the stream to the given *size* in bytes (or the current position
-        if *size* is not specified). This resizing can extend or reduce the
-        current stream size. In case of extension, the contents of the new file
-        area will be NUL (``\\x00``) bytes. The new stream size is returned.
 
-        The current stream position isn’t changed unless the resizing is
-        expanding the stream, in which case it may be set to the maximum stream
-        size if the expansion causes the ring buffer to loop around.
         """
         self._check_open()
         with self.lock:
@@ -474,8 +326,7 @@ class CircularIO(io.IOBase):
                 self._set_pos(self._length)
                 self.write(fill)
             elif size < self._length:
-                # Lop off chunks until we get to the last one at the truncation
-                # point, and slice that one
+
                 save_pos = self._pos
                 self._set_pos(size)
                 while self._pos_index < len(self._data) - 1:
@@ -498,25 +349,19 @@ class CircularIO(io.IOBase):
         self._check_open()
         b = bytes(b)
         with self.lock:
-            # Special case: stream position is beyond the end of the stream.
-            # Call truncate to backfill space first
+
             if self._pos > self._length:
                 self.truncate()
             result = len(b)
             if self._pos == self._length:
-                # Fast path: stream position is at the end of the stream so
-                # just append a new chunk
+
                 self._data.append(b)
                 self._length += len(b)
                 self._pos = self._length
                 self._pos_index = len(self._data)
                 self._pos_offset = 0
             else:
-                # Slow path: stream position is somewhere in the middle;
-                # overwrite bytes in the current (and if necessary, subsequent)
-                # chunk(s), without extending them. If we reach the end of the
-                # stream, call ourselves recursively to continue down the fast
-                # path
+
                 while b and (self._pos < self._length):
                     chunk = self._data[self._pos_index]
                     head = b[:len(chunk) - self._pos_offset]
@@ -632,59 +477,6 @@ class PiCameraDequeFrames(object):
 
 class PiCameraCircularIO(CircularIO):
     """
-    A derivative of :class:`CircularIO` which tracks camera frames.
-
-    PiCameraCircularIO provides an in-memory stream based on a ring buffer. It
-    is a specialization of :class:`CircularIO` which associates video frame
-    meta-data with the recorded stream, accessible from the :attr:`frames`
-    property.
-
-    .. warning::
-
-        The class makes a couple of assumptions which will cause the frame
-        meta-data tracking to break if they are not adhered to:
-
-        * the stream is only ever appended to - no writes ever start from
-          the middle of the stream
-
-        * the stream is never truncated (from the right; being ring buffer
-          based, left truncation will occur automatically); the exception
-          to this is the :meth:`clear` method.
-
-    The *camera* parameter specifies the :class:`PiCamera` instance that will
-    be recording video to the stream. If specified, the *size* parameter
-    determines the maximum size of the stream in bytes. If *size* is not
-    specified (or ``None``), then *seconds* must be specified instead. This
-    provides the maximum length of the stream in seconds, assuming a data rate
-    in bits-per-second given by the *bitrate* parameter (which defaults to
-    ``17000000``, or 17Mbps, which is also the default bitrate used for video
-    recording by :class:`PiCamera`).  You cannot specify both *size* and
-    *seconds*.
-
-    The *splitter_port* parameter specifies the port of the built-in splitter
-    that the video encoder will be attached to. This defaults to ``1`` and most
-    users will have no need to specify anything different. If you do specify
-    something else, ensure it is equal to the *splitter_port* parameter of the
-    corresponding call to :meth:`~PiCamera.start_recording`.  For example::
-
-        import picamera
-
-        with picamera.PiCamera() as camera:
-            with picamera.PiCameraCircularIO(camera, splitter_port=2) as stream:
-                camera.start_recording(stream, format='h264', splitter_port=2)
-                camera.wait_recording(10, splitter_port=2)
-                camera.stop_recording(splitter_port=2)
-
-    .. attribute:: frames
-
-        Returns an iterator over the frame meta-data.
-
-        As the camera records video to the stream, the class captures the
-        meta-data associated with each frame (in the form of a
-        :class:`PiVideoFrame` tuple), discarding meta-data for frames which are
-        no longer fully stored within the underlying ring buffer.  You can use
-        the frame meta-data to locate, for example, the first keyframe present
-        in the stream in order to determine an appropriate range to extract.
     """
     def __init__(
             self, camera, size=None, seconds=None, bitrate=17000000,
@@ -707,7 +499,6 @@ class PiCameraCircularIO(CircularIO):
 
     def _get_frame(self):
         """
-        Return frame metadata from latest frame, when it is complete.
         """
         encoder = self.camera._encoders[self.splitter_port]
         return encoder.frame if encoder.frame.complete else None
@@ -715,20 +506,12 @@ class PiCameraCircularIO(CircularIO):
     @property
     def frames(self):
         """
-        An iterable which contains the meta-data (:class:`PiVideoFrame`
-        objects) for all complete frames currently stored in the circular
-        buffer.
         """
         return self._frames
 
     def clear(self):
         """
-        Resets the stream to empty safely.
 
-        This method truncates the stream to empty, and clears the associated
-        frame meta-data too, ensuring that subsequent writes operate correctly
-        (see the warning in the :class:`PiCameraCircularIO` class
-        documentation).
         """
         with self.lock:
             self.seek(0)
@@ -764,34 +547,7 @@ class PiCameraCircularIO(CircularIO):
             self, output, size=None, seconds=None, frames=None,
             first_frame=PiVideoFrameType.sps_header):
         """
-        copy_to(output, size=None, seconds=None, frames=None, first_frame=PiVideoFrameType.sps_header)
 
-        Copies content from the stream to *output*.
-
-        By default, this method copies all complete frames from the circular
-        stream to the filename or file-like object given by *output*.
-
-        If *size* is specified then the copy will be limited to the whole
-        number of frames that fit within the specified number of bytes. If
-        *seconds* if specified, then the copy will be limited to that number of
-        seconds worth of frames. If *frames* is specified then the copy will
-        be limited to that number of frames. Only one of *size*, *seconds*, or
-        *frames* can be specified. If none is specified, all frames are copied.
-
-        If *first_frame* is specified, it defines the frame type of the first
-        frame to be copied. By default this is
-        :attr:`~PiVideoFrameType.sps_header` as this must usually be the first
-        frame in an H264 stream. If *first_frame* is ``None``, not such limit
-        will be applied.
-
-        .. warning::
-
-            Note that if a frame of the specified type (e.g. SPS header) cannot
-            be found within the specified number of seconds, bytes, or frames,
-            then this method will simply copy nothing (but no error will be
-            raised).
-
-        The stream's position is not affected by this method.
         """
         if (size, seconds, frames).count(None) < 2:
             raise PiCameraValueError(
@@ -812,9 +568,7 @@ class PiCameraCircularIO(CircularIO):
                     first, last = self._find('index', frames, first_frame)
                 else:
                     first, last = self._find_all(first_frame)
-                # Copy chunk references into a holding buffer; this allows us
-                # to release the lock on the stream quickly (in case recording
-                # is on-going)
+
                 chunks = []
                 if first is not None and last is not None:
                     pos = 0
@@ -824,7 +578,6 @@ class PiCameraCircularIO(CircularIO):
                         elif pos >= first.position:
                             chunks.append(buf)
                         pos += len(buf)
-            # Perform the actual I/O, copying chunks to the output
             for buf in chunks:
                 output.write(buf)
             return first, last

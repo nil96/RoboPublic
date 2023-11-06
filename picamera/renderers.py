@@ -1,31 +1,3 @@
-# vim: set et sw=4 sts=4 fileencoding=utf-8:
-#
-# Python camera library for the Rasperry-Pi camera module
-# Copyright (c) 2013-2017 Dave Jones <dave@waveform.org.uk>
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-#     * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above copyright
-#       notice, this list of conditions and the following disclaimer in the
-#       documentation and/or other materials provided with the distribution.
-#     * Neither the name of the copyright holder nor the
-#       names of its contributors may be used to endorse or promote products
-#       derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import (
     unicode_literals,
@@ -48,23 +20,7 @@ from .exc import (
 
 
 class PiRenderer(object):
-    """
-    Wraps :class:`~mmalobj.MMALRenderer` for use by PiCamera.
 
-    The *parent* parameter specifies the :class:`PiCamera` instance that has
-    constructed this renderer. All other parameters set the initial values
-    of the correspondingly named attributes (e.g. the *layer* parameter
-    sets the initial value of the :attr:`layer` attribute, the *crop* parameter
-    sets the initial value of the :attr:`crop` attribute, etc).
-
-    This base class isn't directly used by :class:`PiCamera`, but the two
-    derivatives defined below, :class:`PiOverlayRenderer` and
-    :class:`PiPreviewRenderer`, are used to produce overlays and the camera
-    preview respectively.
-
-    .. versionchanged:: 1.14
-        Added *anamorphic* parameter
-    """
 
     def __init__(
             self, parent, layer=0, alpha=255, fullscreen=True, window=None,
@@ -123,17 +79,7 @@ class PiRenderer(object):
         mp.alpha = value
         self.renderer.inputs[0].params[mmal.MMAL_PARAMETER_DISPLAYREGION] = mp
     alpha = property(_get_alpha, _set_alpha, doc="""\
-        Retrieves or sets the opacity of the renderer.
 
-        When queried, the :attr:`alpha` property returns a value between 0 and
-        255 indicating the opacity of the renderer, where 0 is completely
-        transparent and 255 is completely opaque. The default value is 255. The
-        property can be set while recordings or previews are in progress.
-
-        .. note::
-
-            If the renderer is being fed RGBA data (as in partially transparent
-            overlays), the alpha property will be ignored.
         """)
 
     def _get_layer(self):
@@ -150,12 +96,7 @@ class PiRenderer(object):
         mp.layer = value
         self.renderer.inputs[0].params[mmal.MMAL_PARAMETER_DISPLAYREGION] = mp
     layer = property(_get_layer, _set_layer, doc="""\
-        Retrieves or sets the layer of the renderer.
 
-        The :attr:`layer` property is an integer which controls the layer that
-        the renderer occupies. Higher valued layers obscure lower valued layers
-        (with 0 being the "bottom" layer). The default value is 2. The property
-        can be set while recordings or previews are in progress.
         """)
 
     def _get_fullscreen(self):
@@ -166,13 +107,7 @@ class PiRenderer(object):
         mp.fullscreen = bool(value)
         self.renderer.inputs[0].params[mmal.MMAL_PARAMETER_DISPLAYREGION] = mp
     fullscreen = property(_get_fullscreen, _set_fullscreen, doc="""\
-        Retrieves or sets whether the renderer appears full-screen.
 
-        The :attr:`fullscreen` property is a bool which controls whether the
-        renderer takes up the entire display or not. When set to ``False``, the
-        :attr:`window` property can be used to control the precise size of the
-        renderer display. The property can be set while recordings or previews
-        are active.
         """)
 
     def _get_anamorphic(self):
@@ -183,20 +118,7 @@ class PiRenderer(object):
         mp.noaspect = bool(value)
         self.renderer.inputs[0].params[mmal.MMAL_PARAMETER_DISPLAYREGION] = mp
     anamorphic = property(_get_anamorphic, _set_anamorphic, doc="""\
-        Retrieves or sets whether the renderer is `anamorphic`_.
 
-        The :attr:`anamorphic` property is a bool which controls whether the
-        renderer respects the `aspect ratio`_ of the source. When ``False``
-        (the default) the source aspect ratio is respected. When set to
-        ``True``, the aspect ratio of the source is anamorphed. This can help
-        with things like 16:9 widescreen composite outputs for previews without
-        having to change the cameras output ratio. The property can be set
-        while recordings or previews are active.
-
-        .. versionadded:: 1.14
-
-        .. _aspect ratio: https://en.wikipedia.org/wiki/Aspect_ratio_(image)
-        .. _anamorphic: https://en.wikipedia.org/wiki/Anamorphic_widescreen
         """)
 
     def _get_window(self):
@@ -218,12 +140,7 @@ class PiRenderer(object):
         mp.dest_rect = mmal.MMAL_RECT_T(x, y, w, h)
         self.renderer.inputs[0].params[mmal.MMAL_PARAMETER_DISPLAYREGION] = mp
     window = property(_get_window, _set_window, doc="""\
-        Retrieves or sets the size of the renderer.
 
-        When the :attr:`fullscreen` property is set to ``False``, the
-        :attr:`window` property specifies the size and position of the renderer
-        on the display. The property is a 4-tuple consisting of ``(x, y, width,
-        height)``. The property can be set while recordings or previews are
         active.
         """)
 
@@ -246,25 +163,7 @@ class PiRenderer(object):
         mp.src_rect = mmal.MMAL_RECT_T(x, y, w, h)
         self.renderer.inputs[0].params[mmal.MMAL_PARAMETER_DISPLAYREGION] = mp
     crop = property(_get_crop, _set_crop, doc="""\
-        Retrieves or sets the area to read from the source.
 
-        The :attr:`crop` property specifies the rectangular area that the
-        renderer will read from the source as a 4-tuple of ``(x, y, width,
-        height)``. The special value ``(0, 0, 0, 0)`` (which is also the
-        default) means to read entire area of the source. The property can be
-        set while recordings or previews are active.
-
-        For example, if the camera's resolution is currently configured as
-        1280x720, setting this attribute to ``(160, 160, 640, 400)`` will
-        crop the preview to the center 640x400 pixels of the input. Note that
-        this property does not affect the size of the output rectangle,
-        which is controlled with :attr:`fullscreen` and :attr:`window`.
-
-        .. note::
-
-            This property only affects the renderer; it has no bearing on image
-            captures or recordings (unlike the :attr:`~PiCamera.zoom` property
-            of the :class:`PiCamera` class).
         """)
 
     def _get_rotation(self):
@@ -278,20 +177,9 @@ class PiRenderer(object):
                 self._get_transform(value, self._vflip, self._hflip))
         self._rotation = value
     rotation = property(_get_rotation, _set_rotation, doc="""\
-        Retrieves or sets the current rotation of the renderer.
 
-        When queried, the :attr:`rotation` property returns the rotation
-        applied to the renderer. Valid values are 0, 90, 180, and 270.
 
-        When set, the property changes the rotation applied to the renderer's
-        output. The property can be set while recordings or previews are
-        active. The default is 0.
 
-        .. note::
-
-            This property only affects the renderer; it has no bearing on image
-            captures or recordings (unlike the :attr:`~PiCamera.rotation`
-            property of the :class:`PiCamera` class).
         """)
 
     def _get_vflip(self):
@@ -302,18 +190,7 @@ class PiRenderer(object):
                 self._get_transform(self._rotation, value, self._hflip))
         self._vflip = value
     vflip = property(_get_vflip, _set_vflip, doc="""\
-        Retrieves or sets whether the renderer's output is vertically flipped.
 
-        When queried, the :attr:`vflip` property returns a boolean indicating
-        whether or not the renderer's output is vertically flipped. The
-        property can be set while recordings or previews are in progress. The
-        default is ``False``.
-
-        .. note::
-
-            This property only affects the renderer; it has no bearing on image
-            captures or recordings (unlike the :attr:`~PiCamera.vflip` property
-            of the :class:`PiCamera` class).
         """)
 
     def _get_hflip(self):
@@ -324,19 +201,7 @@ class PiRenderer(object):
                 self._get_transform(self._rotation, self._vflip, value))
         self._hflip = value
     hflip = property(_get_hflip, _set_hflip, doc="""\
-        Retrieves or sets whether the renderer's output is horizontally
-        flipped.
 
-        When queried, the :attr:`vflip` property returns a boolean indicating
-        whether or not the renderer's output is horizontally flipped. The
-        property can be set while recordings or previews are in progress. The
-        default is ``False``.
-
-        .. note::
-
-            This property only affects the renderer; it has no bearing on image
-            captures or recordings (unlike the :attr:`~PiCamera.hflip` property
-            of the :class:`PiCamera` class).
         """)
 
     def _get_transform(self, rotate, vflip, hflip):
@@ -366,44 +231,6 @@ class PiRenderer(object):
 
 class PiOverlayRenderer(PiRenderer):
     """
-    Represents an :class:`~mmalobj.MMALRenderer` with a static source for
-    overlays.
-
-    This class descends from :class:`PiRenderer` and adds a static *source* for
-    the :class:`~mmalobj.MMALRenderer`. The *source* must be an object that
-    supports the :ref:`buffer protocol <bufferobjects>` in one of the supported
-    formats.
-
-    The optional *resolution* parameter specifies the size of the *source* as a
-    ``(width, height)`` tuple. If this is omitted or ``None`` then the
-    resolution is assumed to be the same as the parent camera's current
-    :attr:`~PiCamera.resolution`. The optional *format* parameter specifies the
-    encoding of the *source*. This can be one of the unencoded formats:
-    ``'yuv'``, ``'rgb'``, ``'rgba'``, ``'bgr'``, or ``'bgra'``. If omitted or
-    ``None``, *format* will be guessed based on the size of *source* (assuming
-    3 bytes for `RGB`_, and 4 bytes for `RGBA`_).
-
-    The length of *source* must take into account that widths are rounded up to
-    the nearest multiple of 32, and heights to the nearest multiple of 16.  For
-    example, if *resolution* is ``(1280, 720)``, and *format* is ``'rgb'`` then
-    *source* must be a buffer with length 1280 x 720 x 3 bytes, or 2,764,800
-    bytes (because 1280 is a multiple of 32, and 720 is a multiple of 16 no
-    extra rounding is required).  However, if *resolution* is ``(97, 57)``, and
-    *format* is ``'rgb'`` then *source* must be a buffer with length 128 x 64 x
-    3 bytes, or 24,576 bytes (pixels beyond column 97 and row 57 in the source
-    will be ignored).
-
-    The *layer*, *alpha*, *fullscreen*, and *window* parameters are the same
-    as in :class:`PiRenderer`.
-
-    .. _RGB: https://en.wikipedia.org/wiki/RGB
-    .. _RGBA: https://en.wikipedia.org/wiki/RGBA_color_space
-
-    .. versionchanged:: 1.13
-        Added *format* parameter
-
-    .. versionchanged:: 1.14
-        Added *anamorphic* parameter
     """
 
     SOURCE_BPP = {
@@ -455,19 +282,6 @@ class PiOverlayRenderer(PiRenderer):
 
     def update(self, source):
         """
-        Update the overlay with a new source of data.
-
-        The new *source* buffer must have the same size as the original buffer
-        used to create the overlay. There is currently no method for changing
-        the size of an existing overlay (remove and recreate the overlay if you
-        require this).
-
-        .. note::
-
-            If you repeatedly update an overlay renderer, you must make sure
-            that you do so at a rate equal to, or slower than, the camera's
-            framerate. Going faster will rapidly starve the renderer's pool of
-            buffers leading to a runtime error.
         """
         buf = self.renderer.inputs[0].get_buffer()
         buf.data = source
@@ -476,20 +290,6 @@ class PiOverlayRenderer(PiRenderer):
 
 class PiPreviewRenderer(PiRenderer):
     """
-    Represents an :class:`~mmalobj.MMALRenderer` which uses the camera's
-    preview as a source.
-
-    This class descends from :class:`PiRenderer` and adds an
-    :class:`~mmalobj.MMALConnection` to connect the renderer to an MMAL port.
-    The *source* parameter specifies the :class:`~mmalobj.MMALPort` to connect
-    to the renderer. The *resolution* parameter can be used to override the
-    framesize of the *source*. See :attr:`resolution` for details of when this
-    is useful.
-
-    All other parameters are the same as in :class:`PiRenderer`.
-
-    .. versionchanged:: 1.14
-        Added *anamorphic* parameter
     """
 
     def __init__(
@@ -527,58 +327,12 @@ class PiPreviewRenderer(PiRenderer):
         self._parent._camera.outputs[self._parent.CAMERA_PREVIEW_PORT].commit()
         self.renderer.connection.enable()
     resolution = property(_get_resolution, _set_resolution, doc="""\
-        Retrieves or sets the resolution of the preview renderer.
 
-        By default, the preview's resolution matches the camera's resolution.
-        However, particularly high resolutions (such as the maximum resolution
-        of the V2 camera module) can cause issues. In this case, you may wish
-        to set a lower resolution for the preview that the camera's resolution.
-
-        When queried, the :attr:`resolution` property returns ``None`` if the
-        preview's resolution is derived from the camera's. In this case,
-        changing the camera's resolution will also cause the preview's
-        resolution to change. Otherwise, it returns the current preview
-        resolution as a tuple.
-
-        .. note::
-
-            The preview resolution cannot be greater than the camera's
-            resolution. If you set a preview resolution, then change the
-            camera's resolution below the preview's resolution, this property
-            will silently revert to ``None``, meaning the preview's resolution
-            will follow the camera's resolution.
-
-        When set, the property reconfigures the preview renderer with the new
-        resolution.  As a special case, setting the property to ``None`` will
-        cause the preview to follow the camera's resolution once more. The
-        property can be set while recordings are in progress. The default is
-        ``None``.
-
-        .. note::
-
-            This property only affects the renderer; it has no bearing on image
-            captures or recordings (unlike the :attr:`~PiCamera.resolution`
-            property of the :class:`PiCamera` class).
-
-        .. versionadded:: 1.11
         """)
 
 
 class PiNullSink(object):
     """
-    Implements an :class:`~mmalobj.MMALNullSink` which can be used in place of
-    a renderer.
-
-    The *parent* parameter specifies the :class:`PiCamera` instance which
-    constructed this :class:`~mmalobj.MMALNullSink`. The *source* parameter
-    specifies the :class:`~mmalobj.MMALPort` which the null-sink should connect
-    to its input.
-
-    The null-sink can act as a drop-in replacement for :class:`PiRenderer` in
-    most cases, but obviously doesn't implement attributes like ``alpha``,
-    ``layer``, etc. as it simply dumps any incoming frames. This is also the
-    reason that this class doesn't derive from :class:`PiRenderer` like all
-    other classes in this module.
     """
 
     def __init__(self, parent, source):
@@ -588,11 +342,7 @@ class PiNullSink(object):
 
     def close(self):
         """
-        Finalizes the null-sink and deallocates all structures.
 
-        This method is called by the camera prior to destroying the null-sink
-        (or more precisely, letting it go out of scope to permit the garbage
-        collector to destroy it at some future time).
         """
         if self.renderer:
             self.renderer.close()
